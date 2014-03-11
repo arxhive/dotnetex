@@ -50,60 +50,42 @@ namespace ConsoleTest
 			var a = new object();
 			var heap = new UnmanagedHeap<Customer>(100);
 			var b = new object();
-			/*
-			int count = 0, cursize = 0, size = 0;
-
-			foreach(var cur in GCEx.GetObjectsInSOH(a))
-			{
-				cursize = GCEx.SizeOf(cur);
-				if(cur is Array)
-				{
-					Console.WriteLine("At [0x{0:X}] Type found: {1}, points to array of [{2}] size, len={3}", (int)cur.GetEntityInfo(), cur.GetType().Name, ((ArrayInfo *)EntityPtr.ToHandler(cur))->SizeOf(), (cur as Array).Length);
-				}else
-				if(cur is UnmanagedHeap<Dictionary<Type, int>>)
-				{
-					Console.WriteLine("At [0x{0:X}] Type found: {1}, points to heap of [{2}] size", (int)cur.GetEntityInfo(), cur.GetType().Name, (cur as UnmanagedHeap<Dictionary<Type, int>>).TotalSize );
-				} else {
-					Console.WriteLine("At [0x{0:X}] Type found: {1}", (int)cur.GetEntityInfo(), cur.GetType().Name);
-				}
-				size += cursize;					
-				count++;
-			}
 			
-			Console.WriteLine(" - sum: {0}, count: {1}", size, count);
-			*/
+            // Let CLR finish all startup processes
 			Console.ReadKey();
-			Stopwatch sw = Stopwatch.StartNew();
+			
+            var sw = Stopwatch.StartNew();
 			for(int i = 0; i < 100; i++)
 			{
 				var obj = heap.AllocatePure();
 			}
 			
-			long fst = sw.ElapsedTicks;
-			Console.WriteLine("Ctor call via reflection: {0}", fst);
+			var pureAllocTicks = sw.ElapsedTicks;
+			Console.WriteLine("Ctor call via reflection (on already allocated memory): {0}", pureAllocTicks);
 			
 			heap.Reset();
 			
-			Stopwatch sw1 = Stopwatch.StartNew();
+			sw = Stopwatch.StartNew();
 			for(int i = 0; i < 100; i++)
 			{
 				var obj = heap.Allocate();
 			}
 			
-			long sec = sw1.ElapsedTicks;
-			Console.WriteLine("Ctor call via method body ptr redirection: {0}", sec);
+			var ctorRedirTicks = sw.ElapsedTicks;
+			Console.WriteLine("Ctor call via method body ptr redirection: {0}", ctorRedirTicks);
 			
-			Stopwatch sw2 = Stopwatch.StartNew();
+			sw = Stopwatch.StartNew();
 			for(int i = 0; i < 100; i++)
 			{
 				var obj = new Customer(123);
 			}
 			
-			long ctor = sw2.ElapsedTicks;
-			Console.WriteLine("pure allocation in managed memory: {0}", ctor);
+			var newObjTicks = sw.ElapsedTicks;
+			Console.WriteLine("pure allocation in managed memory: {0}", newObjTicks);
 			
-			Console.WriteLine("Redir vs Reflexion {0}", (float)fst / (float)sec);
-			Console.WriteLine("Redir vs new..ctor: {0}", (float)sec / (float)ctor);
+			Console.WriteLine("Refl ctor call / ctor Redirection {0} (higher is slower)", (float)pureAllocTicks / ctorRedirTicks);
+            Console.WriteLine("ctor Redirection / newobj:        {0} (higher is slower)", (float)ctorRedirTicks / newObjTicks);
+            Console.WriteLine("Refl ctor call / newobj:          {0} (higher is slower)", (float)pureAllocTicks / newObjTicks);
 			
 			Console.ReadKey();
 		}
