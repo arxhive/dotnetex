@@ -11,7 +11,7 @@ namespace System.Runtime.CLR
 	
 	internal static class Stub
 	{
-		public static void Construct(IntPtr obj, int value)
+		public static void Construct(int obj, int value)
 		{
 			Console.WriteLine("Construct1");
 		}	
@@ -23,16 +23,16 @@ namespace System.Runtime.CLR
 	/// </summary>
 	public unsafe class UnmanagedHeap<T> where T : new()
 	{
-		private readonly Queue<WeakReference> _freeObjects;
-		private readonly List<WeakReference> _allObjects;
+		private readonly Queue<T> _freeObjects;
+		private readonly List<T> _allObjects;
 		private readonly int _totalSize;
-		private readonly CtorDelegate _ctor;
+		private readonly ConstructorInfo _ctor;
 		//private readonly Stub _stub = new Stub();
 		
 		public unsafe UnmanagedHeap(int capacity)
 		{                                
-		    _freeObjects = new Queue<WeakReference>(capacity);
-			_allObjects = new List<WeakReference>(capacity);
+		    _freeObjects = new Queue<T>(capacity);
+			_allObjects = new List<T>(capacity);
 			
 			var objectSize = 20; //GCEx.SizeOf<T>();
 			_totalSize = objectSize * capacity;
@@ -42,7 +42,7 @@ namespace System.Runtime.CLR
 			
 			var ptr = new EntityPtr();
 			var pFake = typeof(Stub).GetMethod("Construct", BindingFlags.Static|BindingFlags.Public);
-			var pCtor = typeof(T).GetConstructor(new Type[]{typeof(int)});
+			var pCtor = _ctor = typeof(T).GetConstructor(new Type[]{typeof(int)});
 		
 			MethodUtil.ReplaceMethod(pCtor, pFake);
 			
@@ -50,10 +50,13 @@ namespace System.Runtime.CLR
 			{
 				ptr.Handler =  startingPointer + (objectSize * i);
 				ptr.Object.SetMethodTable(mTable);
-				var reference = new WeakReference(ptr.Object);
+				var reference = (T)ptr.Object;
 				_freeObjects.Enqueue(reference);
 				_allObjects.Add(reference);
 			}
+			
+			obj = _freeObjects.Dequeue();			
+			ppp = EntityPtr.ToHandler(obj) + 4;
 		}
 		
 		private unsafe CtorDelegate CtorToDelegate()
@@ -74,16 +77,27 @@ namespace System.Runtime.CLR
 		
 		public T Allocate()
 		{			
-			var obj = _freeObjects.Dequeue().Target;			
-			var ptr = new IntPtr(EntityPtr.ToHandler(obj) + 4);
-			Stub.Construct(ptr, 123);
-			
+			var obj = _freeObjects.Dequeue();			
+			_ctor.Invoke(obj, new Object[]{123});		
+			return (T)obj;
+		}
+		
+		
+		int ppp;
+	T obj;
+		public T AllocatePure()
+		{
+			/*
+			obj = _freeObjects.Dequeue();			
+			ppp = EntityPtr.ToHandler(obj) + 4;
+			*/
+			Stub.Construct(ppp, 123);			
 			return (T)obj;
 		}
 		
 		public void Free(T obj)
 		{
-			_freeObjects.Enqueue(new WeakReference(obj));			
+			_freeObjects.Enqueue(obj);			
 		}	
 	}
 }

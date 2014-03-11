@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Collections.Generic;
@@ -27,17 +28,17 @@ namespace ConsoleTest
 			int x = 20;
 			
 			public Customer()
-			{
-				Console.WriteLine("Customer called");
+			{			
 			}
+			
 			public Customer(int a)
 			{
-				Console.WriteLine("Customer called");
 			}
+			
 			public Customer(int a, int b)
 			{
-				Console.WriteLine("Customer called");
 			}
+			
 			public override string ToString()
 			{
 				return "From Customer";
@@ -71,8 +72,39 @@ namespace ConsoleTest
 			
 			Console.WriteLine(" - sum: {0}, count: {1}", size, count);
 			*/
+			Console.ReadKey();
+			Stopwatch sw = Stopwatch.StartNew();
 			for(int i = 0; i < 100; i++)
-				heap.Allocate();
+			{
+				var obj = heap.Allocate();
+				heap.Free(obj);
+			}
+			
+			long fst = sw.ElapsedTicks;
+			Console.WriteLine("Delta: {0}", fst);
+			
+			Stopwatch sw1 = Stopwatch.StartNew();
+			for(int i = 0; i < 100; i++)
+			{
+				var obj = heap.AllocatePure();
+				heap.Free(obj);
+			}
+			
+			long scd = sw1.ElapsedTicks;
+			Console.WriteLine("Delta: {0}", scd);
+			
+			Stopwatch sw2 = Stopwatch.StartNew();
+			for(int i = 0; i < 100; i++)
+			{
+				var obj = new Customer(123);
+			}
+			
+			long ctor = sw2.ElapsedTicks;
+			Console.WriteLine("Delta: {0}", ctor);
+			
+			Console.WriteLine("x times faster: {0}", fst / scd);
+			Console.WriteLine("x times faster: {0}", fst / ctor);
+			
 			/*
 			count = 0; cursize = 0; size = 0;;
 
