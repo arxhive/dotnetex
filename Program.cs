@@ -48,14 +48,14 @@ namespace ConsoleTest
 		public unsafe static void Main(string[] args)
 		{
 			var a = new object();
-			var heap = new UnmanagedHeap<Customer>(100);
+			var heap = new UnmanagedHeap<Customer>(10000);
 			var b = new object();
 			
             // Let CLR finish all startup processes
 			Console.ReadKey();
 			
             var sw = Stopwatch.StartNew();
-			for(int i = 0; i < 100; i++)
+			for(int i = 0; i < 10000; i++)
 			{
 				var obj = heap.AllocatePure();
 			}
@@ -66,7 +66,7 @@ namespace ConsoleTest
 			heap.Reset();
 			
 			sw = Stopwatch.StartNew();
-			for(int i = 0; i < 100; i++)
+			for(int i = 0; i < 10000; i++)
 			{
 				var obj = heap.Allocate();
 			}
@@ -75,13 +75,13 @@ namespace ConsoleTest
 			Console.WriteLine("Ctor call via method body ptr redirection: {0}", ctorRedirTicks);
 			
 			sw = Stopwatch.StartNew();
-			for(int i = 0; i < 100; i++)
+			for(int i = 0; i < 10000; i++)
 			{
 				var obj = new Customer(123);
 			}
 			
 			var newObjTicks = sw.ElapsedTicks;
-			Console.WriteLine("pure allocation in managed memory: {0}", newObjTicks);
+            Console.WriteLine("pure allocation in managed memory: {0}", newObjTicks);
 			
 			Console.WriteLine("Refl ctor call / ctor Redirection {0} (higher is slower)", (float)pureAllocTicks / ctorRedirTicks);
             Console.WriteLine("ctor Redirection / newobj:        {0} (higher is slower)", (float)ctorRedirTicks / newObjTicks);

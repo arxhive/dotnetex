@@ -48,7 +48,7 @@ namespace System.Runtime.CLR
 			_allObjects = new TPoolItem[capacity];
 			_freeSize = capacity;
 			
-			var objectSize = 20; //GCEx.SizeOf<T>();
+			var objectSize = 100; //GCEx.SizeOf<T>();
 			_totalSize = objectSize * capacity;
 			
 			var startingPointer = Marshal.AllocHGlobal(_totalSize).ToInt32();
@@ -96,7 +96,7 @@ namespace System.Runtime.CLR
 		
 		public TPoolItem AllocatePure()
 		{
-			_freeSize--;
+            _freeSize--;
 			var obj = _freeObjects[_freeSize]; 
 			_ctor.Invoke(obj, new object[]{123});			
 			return (TPoolItem)obj;
