@@ -23,7 +23,7 @@ namespace ConsoleTest
 			}
 		}
 		
-		public class Customer
+		public class Customer : UnmanagedObject
 		{
 			int x = 20;
 			
@@ -76,22 +76,22 @@ namespace ConsoleTest
 			Stopwatch sw = Stopwatch.StartNew();
 			for(int i = 0; i < 100; i++)
 			{
-				var obj = heap.Allocate();
-				heap.Free(obj);
+				var obj = heap.AllocatePure();
 			}
 			
 			long fst = sw.ElapsedTicks;
-			Console.WriteLine("Delta: {0}", fst);
+			Console.WriteLine("Ctor call via reflection: {0}", fst);
+			
+			heap.Reset();
 			
 			Stopwatch sw1 = Stopwatch.StartNew();
 			for(int i = 0; i < 100; i++)
 			{
-				var obj = heap.AllocatePure();
-				heap.Free(obj);
+				var obj = heap.Allocate();
 			}
 			
-			long scd = sw1.ElapsedTicks;
-			Console.WriteLine("Delta: {0}", scd);
+			long sec = sw1.ElapsedTicks;
+			Console.WriteLine("Ctor call via method body ptr redirection: {0}", sec);
 			
 			Stopwatch sw2 = Stopwatch.StartNew();
 			for(int i = 0; i < 100; i++)
@@ -100,33 +100,11 @@ namespace ConsoleTest
 			}
 			
 			long ctor = sw2.ElapsedTicks;
-			Console.WriteLine("Delta: {0}", ctor);
+			Console.WriteLine("pure allocation in managed memory: {0}", ctor);
 			
-			Console.WriteLine("x times faster: {0}", fst / scd);
-			Console.WriteLine("x times faster: {0}", fst / ctor);
+			Console.WriteLine("Redir vs Reflexion {0}", (float)fst / (float)sec);
+			Console.WriteLine("Redir vs new..ctor: {0}", (float)sec / (float)ctor);
 			
-			/*
-			count = 0; cursize = 0; size = 0;;
-
-			foreach(var cur in GCEx.GetObjectsInSOH(a))
-			{
-				cursize = GCEx.SizeOf(cur);
-				if(cur is Array)
-				{
-					Console.WriteLine("At [0x{0:X}] Type found: {1}, points to array of [{2}] size, len={3}", (int)cur.GetEntityInfo(), cur.GetType().Name, ((ArrayInfo *)EntityPtr.ToHandler(cur))->SizeOf(), (cur as Array).Length);
-				}else
-				if(cur is UnmanagedHeap<Dictionary<Type, int>>)
-				{
-					Console.WriteLine("At [0x{0:X}] Type found: {1}, points to heap of [{2}] size", (int)cur.GetEntityInfo(), cur.GetType().Name, (cur as UnmanagedHeap<Dictionary<Type, int>>).TotalSize );
-				} else {
-					Console.WriteLine("At [0x{0:X}] Type found: {1}", (int)cur.GetEntityInfo(), cur.GetType().Name);
-				}
-				size += cursize;					
-				count++;
-			}
-			
-			Console.WriteLine(" - sum: {0}, count: {1}", size, count);
-			*/
 			Console.ReadKey();
 		}
 		
@@ -138,9 +116,9 @@ namespace ConsoleTest
 			{
 				cursize = GCEx.SizeOf(cur);
 				
-				if(cur is UnmanagedHeap<Dictionary<Type, int>>)
+				if(cur is UnmanagedHeap<Customer>)
 				{
-					Console.WriteLine("At [0x{0:X}] Type found: {1}, points to heap of [{2}] size", (int)cur.GetEntityInfo(), cur.GetType().Name, (cur as UnmanagedHeap<Dictionary<Type, int>>).TotalSize );
+					Console.WriteLine("At [0x{0:X}] Type found: {1}, points to heap of [{2}] size", (int)cur.GetEntityInfo(), cur.GetType().Name, (cur as UnmanagedHeap<Customer>).TotalSize );
 				} else {
 					Console.WriteLine("At [0x{0:X}] Type found: {1}", (int)cur.GetEntityInfo(), cur.GetType().Name);
 				}

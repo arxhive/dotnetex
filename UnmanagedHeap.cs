@@ -17,32 +17,46 @@ namespace System.Runtime.CLR
 		}	
 	}
 	
+	public class UnmanagedObject : IDisposable
+	{
+		internal int index;
+		internal int ptr;
+		
+		
+		#region IDisposable implementation
+		void IDisposable.Dispose()
+		{
+			// throw new NotImplementedException();
+		}
+		#endregion
+	}
+	
 	
 	/// <summary>
 	/// Description of UnmanagedHeap.
 	/// </summary>
-	public unsafe class UnmanagedHeap<T> where T : new()
+	public unsafe class UnmanagedHeap<TPoolItem> where TPoolItem : UnmanagedObject
 	{
-		private readonly Queue<T> _freeObjects;
-		private readonly List<T> _allObjects;
+		private readonly TPoolItem[] _freeObjects;
+		private readonly TPoolItem[] _allObjects;
 		private readonly int _totalSize;
+		private int _freeSize;
 		private readonly ConstructorInfo _ctor;
-		//private readonly Stub _stub = new Stub();
 		
 		public unsafe UnmanagedHeap(int capacity)
 		{                                
-		    _freeObjects = new Queue<T>(capacity);
-			_allObjects = new List<T>(capacity);
+			_allObjects = new TPoolItem[capacity];
+			_freeSize = capacity;
 			
 			var objectSize = 20; //GCEx.SizeOf<T>();
 			_totalSize = objectSize * capacity;
 			
 			var startingPointer = Marshal.AllocHGlobal(_totalSize).ToInt32();
-			var mTable = (MethodTableInfo *)typeof(T).TypeHandle.Value.ToInt32();
+			var mTable = (MethodTableInfo *)typeof(TPoolItem).TypeHandle.Value.ToInt32();
 			
 			var ptr = new EntityPtr();
 			var pFake = typeof(Stub).GetMethod("Construct", BindingFlags.Static|BindingFlags.Public);
-			var pCtor = _ctor = typeof(T).GetConstructor(new Type[]{typeof(int)});
+			var pCtor = _ctor = typeof(TPoolItem).GetConstructor(new Type[]{typeof(int)});
 		
 			MethodUtil.ReplaceMethod(pCtor, pFake);
 			
@@ -50,54 +64,54 @@ namespace System.Runtime.CLR
 			{
 				ptr.Handler =  startingPointer + (objectSize * i);
 				ptr.Object.SetMethodTable(mTable);
-				var reference = (T)ptr.Object;
-				_freeObjects.Enqueue(reference);
-				_allObjects.Add(reference);
-			}
+				
+				var reference = (TPoolItem)ptr.Object;
+				reference.index = i;
+				reference.ptr = EntityPtr.ToHandler(ptr.Object) + 4;
+				
+				_allObjects[i] = reference;
+			}			
 			
-			obj = _freeObjects.Dequeue();			
-			ppp = EntityPtr.ToHandler(obj) + 4;
-		}
-		
-		private unsafe CtorDelegate CtorToDelegate()
-		{
-			var handle= typeof(T).GetConstructor(Type.EmptyTypes).MethodHandle;
-			RuntimeHelpers.PrepareMethod(handle);
-			var ctor = new IntPtr(*(int *)MethodUtil.GetMethodAddress(typeof(T).GetConstructor(Type.EmptyTypes)).ToPointer());
-			return (CtorDelegate)Marshal.GetDelegateForFunctionPointer(ctor, typeof(CtorDelegate));
+			_freeObjects = (TPoolItem[])_allObjects.Clone();
+			
+			// compile methods
+			this.Free(this.Allocate());
+			this.Free(this.AllocatePure());
 		}
 		
 		public int TotalSize
 		{
-			get 
-            {
+			get {
 				return _totalSize;
 			}
 		}
 		
-		public T Allocate()
-		{			
-			var obj = _freeObjects.Dequeue();			
-			_ctor.Invoke(obj, new Object[]{123});		
-			return (T)obj;
+		public TPoolItem Allocate()
+		{
+			_freeSize--;
+			var obj = _freeObjects[_freeSize];
+			Stub.Construct(_freeObjects[_freeSize].ptr, 123);			
+			return (TPoolItem)obj;
 		}
 		
-		
-		int ppp;
-	T obj;
-		public T AllocatePure()
+		public TPoolItem AllocatePure()
 		{
-			/*
-			obj = _freeObjects.Dequeue();			
-			ppp = EntityPtr.ToHandler(obj) + 4;
-			*/
-			Stub.Construct(ppp, 123);			
-			return (T)obj;
+			_freeSize--;
+			var obj = _freeObjects[_freeSize]; 
+			_ctor.Invoke(obj, new object[]{123});			
+			return (TPoolItem)obj;
 		}
 		
-		public void Free(T obj)
+		public void Free(TPoolItem obj)
 		{
-			_freeObjects.Enqueue(obj);			
+			_freeObjects[_freeSize] = obj;
+			_freeSize++;
 		}	
+		
+		public void Reset()
+		{
+			_allObjects.CopyTo(_freeObjects, 0);
+			_freeSize = _freeObjects.Length;
+		}
 	}
 }
