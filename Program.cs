@@ -25,7 +25,16 @@ namespace ConsoleTest
 		public class Customer
 		{
 			int x = 20;
+			
 			public Customer()
+			{
+				Console.WriteLine("Customer called");
+			}
+			public Customer(int a)
+			{
+				Console.WriteLine("Customer called");
+			}
+			public Customer(int a, int b)
 			{
 				Console.WriteLine("Customer called");
 			}

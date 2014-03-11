@@ -7,21 +7,16 @@ using System.Runtime.InteropServices;
 
 namespace System.Runtime.CLR
 {
-	public delegate IntPtr MyUnmanagedDelegate(IntPtr obj);
+	public delegate void CtorDelegate(IntPtr obj);
 	
-	internal class Stub
+	internal static class Stub
 	{
-		public static void Construct(ConsoleTest.MainClass.Customer obj)
+		public static void Construct(IntPtr obj, int value)
 		{
-			//return null;
-		}
-		
-		public static void Construct2(ConsoleTest.MainClass.Customer obj)
-		{
-			Console.WriteLine("Construct2");
-			//return null;
-		}
+			Console.WriteLine("Construct1");
+		}	
 	}
+	
 	
 	/// <summary>
 	/// Description of UnmanagedHeap.
@@ -31,29 +26,24 @@ namespace System.Runtime.CLR
 		private readonly Queue<WeakReference> _freeObjects;
 		private readonly List<WeakReference> _allObjects;
 		private readonly int _totalSize;
-		private readonly MyUnmanagedDelegate _ctor;
-		private readonly Stub _stub = new Stub();
+		private readonly CtorDelegate _ctor;
+		//private readonly Stub _stub = new Stub();
 		
 		public unsafe UnmanagedHeap(int capacity)
 		{                                
 		    _freeObjects = new Queue<WeakReference>(capacity);
 			_allObjects = new List<WeakReference>(capacity);
 			
-			var objectSize = 12; //GCEx.SizeOf<T>();
+			var objectSize = 20; //GCEx.SizeOf<T>();
 			_totalSize = objectSize * capacity;
 			
 			var startingPointer = Marshal.AllocHGlobal(_totalSize).ToInt32();
 			var mTable = (MethodTableInfo *)typeof(T).TypeHandle.Value.ToInt32();
 			
-			var ptr = new EntityPtr();			
-			//_ctor = CCtorToDelegate();
-			
+			var ptr = new EntityPtr();
 			var pFake = typeof(Stub).GetMethod("Construct", BindingFlags.Static|BindingFlags.Public);
-			var pCtor = typeof(Stub).GetMethod("Construct2", BindingFlags.Static|BindingFlags.Public);//typeof(T).GetConstructor(Type.EmptyTypes);
-			
-			RuntimeHelpers.PrepareMethod(pFake.MethodHandle);
-			RuntimeHelpers.PrepareMethod(pCtor.MethodHandle);
-			
+			var pCtor = typeof(T).GetConstructor(new Type[]{typeof(int)});
+		
 			MethodUtil.ReplaceMethod(pCtor, pFake);
 			
 			for(int i = 0; i < capacity; i++)
@@ -66,13 +56,13 @@ namespace System.Runtime.CLR
 			}
 		}
 		
-		/*
-		private unsafe MyUnmanagedDelegate CCtorToDelegate()
+		private unsafe CtorDelegate CtorToDelegate()
 		{
-			var ctor = new IntPtr(*(int *)GetMethodAddress(typeof(T).GetConstructor(Type.EmptyTypes)).ToPointer());
-		    return (MyUnmanagedDelegate) Marshal.GetDelegateForFunctionPointer(ctor, typeof(MyUnmanagedDelegate));
+			var handle= typeof(T).GetConstructor(Type.EmptyTypes).MethodHandle;
+			RuntimeHelpers.PrepareMethod(handle);
+			var ctor = new IntPtr(*(int *)MethodUtil.GetMethodAddress(typeof(T).GetConstructor(Type.EmptyTypes)).ToPointer());
+			return (CtorDelegate)Marshal.GetDelegateForFunctionPointer(ctor, typeof(CtorDelegate));
 		}
-		*/
 		
 		public int TotalSize
 		{
@@ -84,8 +74,10 @@ namespace System.Runtime.CLR
 		
 		public T Allocate()
 		{			
-			var obj = _freeObjects.Dequeue().Target;
-			Stub.Construct((ConsoleTest.MainClass.Customer)obj);
+			var obj = _freeObjects.Dequeue().Target;			
+			var ptr = new IntPtr(EntityPtr.ToHandler(obj) + 4);
+			Stub.Construct(ptr, 123);
+			
 			return (T)obj;
 		}
 		
