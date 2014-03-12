@@ -82,10 +82,10 @@ namespace ConsoleTest
 			
 			var newObjTicks = sw.ElapsedTicks;
             Console.WriteLine("pure allocation in managed memory: {0}", newObjTicks);
-			
-			Console.WriteLine("Refl ctor call / ctor Redirection {0} (higher is slower)", (float)pureAllocTicks / ctorRedirTicks);
-            Console.WriteLine("ctor Redirection / newobj:        {0} (higher is slower)", (float)ctorRedirTicks / newObjTicks);
-            Console.WriteLine("Refl ctor call / newobj:          {0} (higher is slower)", (float)pureAllocTicks / newObjTicks);
+
+            Console.WriteLine("ctor Redirection / Refl ctor call {0} (higher is faster)", (float)pureAllocTicks / ctorRedirTicks);
+            Console.WriteLine("ctor Redirection / newobj:        {0} (higher is faster)", (float)newObjTicks / ctorRedirTicks);
+            Console.WriteLine("newobj / Refl ctor call:          {0} (higher is faster)", (float)pureAllocTicks / newObjTicks);
 			
 			Console.ReadKey();
 		}
