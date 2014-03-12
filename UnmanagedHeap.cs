@@ -13,25 +13,41 @@ namespace System.Runtime.CLR
 		}	
 	}
 	
-	public class UnmanagedObject : IDisposable
+	public class UnmanagedObject<T> : IDisposable where T : UnmanagedObject<T>
 	{
 		internal int index;
-		internal int ptr;
 		
+		internal IUnmanagedHeap<T> heap;
 		
 		#region IDisposable implementation
 		void IDisposable.Dispose()
 		{
-			// throw new NotImplementedException();
+			heap.Free(this);
 		}
 		#endregion
 	}
 	
 	
+	public interface IUnmanagedHeapBase
+	{
+		int TotalSize { get; }		
+		object Allocate();
+		void Free(object obj);
+		void Reset();
+	}
+	
+	public interface IUnmanagedHeap<TPoolItem> : IUnmanagedHeapBase where TPoolItem : UnmanagedObject<TPoolItem>
+	{
+		int TotalSize { get; }		
+		TPoolItem Allocate();
+		void Free(TPoolItem obj);
+		void Reset();
+	}
+	
 	/// <summary>
 	/// Description of UnmanagedHeap.
 	/// </summary>
-	public unsafe class UnmanagedHeap<TPoolItem> where TPoolItem : UnmanagedObject
+	public unsafe class UnmanagedHeap<TPoolItem> : IUnmanagedHeap<TPoolItem> where TPoolItem : UnmanagedObject<TPoolItem>
 	{
 		private readonly TPoolItem[] _freeObjects;
 		private readonly TPoolItem[] _allObjects;
@@ -63,7 +79,7 @@ namespace System.Runtime.CLR
 				
 				var reference = (TPoolItem)ptr.Object;
 				reference.index = i;
-				reference.ptr = EntityPtr.ToHandler(ptr.Object) + 4;
+				reference.heap = this as IUnmanagedHeap<TPoolItem>;
 				
 				_allObjects[i] = reference;
 			}			
@@ -81,7 +97,7 @@ namespace System.Runtime.CLR
 				return _totalSize;
 			}
 		}
-		
+				
 		public TPoolItem Allocate()
 		{
 			_freeSize--;
@@ -108,6 +124,16 @@ namespace System.Runtime.CLR
 		{
 			_allObjects.CopyTo(_freeObjects, 0);
 			_freeSize = _freeObjects.Length;
+		}
+
+		object IUnmanagedHeapBase.Allocate()
+		{
+			return this.Allocate();
+		}
+		
+		void IUnmanagedHeapBase.Free(object obj)
+		{
+			this.Free((TPoolItem)obj);
 		}
 	}
 }

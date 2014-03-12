@@ -23,7 +23,7 @@ namespace ConsoleTest
 			}
 		}
 		
-		public class Customer : UnmanagedObject
+		public class Customer : UnmanagedObject<Customer>
 		{
 			int x = 20;
 			
