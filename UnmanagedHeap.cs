@@ -14,9 +14,7 @@ namespace System.Runtime.CLR
 	}
 	
 	public class UnmanagedObject<T> : IDisposable where T : UnmanagedObject<T>
-	{
-		internal int index;
-		
+	{	
 		internal IUnmanagedHeap<T> heap;
 		
 		#region IDisposable implementation
@@ -78,7 +76,6 @@ namespace System.Runtime.CLR
 				ptr.Object.SetMethodTable(mTable);
 				
 				var reference = (TPoolItem)ptr.Object;
-				reference.index = i;
 				reference.heap = this as IUnmanagedHeap<TPoolItem>;
 				
 				_allObjects[i] = reference;
