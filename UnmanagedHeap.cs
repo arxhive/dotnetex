@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Runtime.CompilerServices;
+﻿using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace System.Runtime.CLR
@@ -11,7 +7,7 @@ namespace System.Runtime.CLR
 	
 	internal static class Stub
 	{
-		public static void Construct(int obj, int value)
+		public static void Construct(object obj, int value)
 		{
 			Console.WriteLine("Construct1");
 		}	
@@ -90,8 +86,8 @@ namespace System.Runtime.CLR
 		{
 			_freeSize--;
 			var obj = _freeObjects[_freeSize];
-			Stub.Construct(_freeObjects[_freeSize].ptr, 123);			
-			return (TPoolItem)obj;
+			Stub.Construct(obj, 123);			
+			return obj;
 		}
 		
 		public TPoolItem AllocatePure()
@@ -99,7 +95,7 @@ namespace System.Runtime.CLR
             _freeSize--;
 			var obj = _freeObjects[_freeSize]; 
 			_ctor.Invoke(obj, new object[]{123});			
-			return (TPoolItem)obj;
+			return obj;
 		}
 		
 		public void Free(TPoolItem obj)
